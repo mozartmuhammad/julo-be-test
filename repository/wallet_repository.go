@@ -14,5 +14,6 @@ type WalletRepository interface {
 	UpdateWalletBalance(ctx context.Context, walletID string, initialAmount, finalAmount int) (bool, error)
 
 	GetWalletTransactions(ctx context.Context, walletID string) ([]domain.Transaction, error)
+	UpdateTransactionStatus(ctx context.Context, transactionID, status string) error
 	AddTransaction(ctx context.Context, transaction domain.Transaction) error
 }

@@ -4,6 +4,7 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"log"
 	"time"
 
 	"github.com/go-playground/validator/v10"
@@ -32,6 +33,7 @@ func (svc *WalletService) InitializeWallet(ctx context.Context, request web.Wall
 		return err
 	}
 
+	// create new wallet
 	wallet := domain.Wallet{
 		ID:          uuid.New().String(),
 		CustomerXID: request.CustomerXID,
@@ -61,13 +63,25 @@ func (svc *WalletService) GetWalletBalance(ctx context.Context, customerXID stri
 }
 
 func (svc *WalletService) EnableWallet(ctx context.Context, customerXID string) (web.WalletResponse, error) {
-	enabledAt := time.Now()
-	err := svc.WalletRepository.UpdateWalletStatus(ctx, customerXID, constants.STATUS_ENABLED, &enabledAt)
+	wallet, err := svc.WalletRepository.GetWallet(ctx, customerXID)
 	if err != nil {
 		return web.WalletResponse{}, err
 	}
 
-	wallet, err := svc.WalletRepository.GetWallet(ctx, customerXID)
+	// check wallet status
+	if wallet.Status == constants.STATUS_ENABLED {
+		return web.WalletResponse{}, errors.New("Already enabled")
+	}
+
+	// update wallet status
+	enabledAt := time.Now()
+	err = svc.WalletRepository.UpdateWalletStatus(ctx, customerXID, constants.STATUS_ENABLED, &enabledAt)
+	if err != nil {
+		return web.WalletResponse{}, err
+	}
+
+	// get latest wallet data
+	wallet, err = svc.WalletRepository.GetWallet(ctx, customerXID)
 	if err != nil {
 		return web.WalletResponse{}, err
 	}
@@ -82,11 +96,13 @@ func (svc *WalletService) EnableWallet(ctx context.Context, customerXID string) 
 }
 
 func (svc *WalletService) DisableWallet(ctx context.Context, customerXID string) (web.WalletResponse, error) {
+	// disable wallet
 	err := svc.WalletRepository.UpdateWalletStatus(ctx, customerXID, constants.STATUS_DISABLED, nil)
 	if err != nil {
 		return web.WalletResponse{}, err
 	}
 
+	// get wallet data
 	wallet, err := svc.WalletRepository.GetWallet(ctx, customerXID)
 	if err != nil {
 		return web.WalletResponse{}, err
@@ -105,6 +121,11 @@ func (svc *WalletService) GetWalletTransactions(ctx context.Context, customerXID
 	wallet, err := svc.WalletRepository.GetWallet(ctx, customerXID)
 	if err != nil {
 		return []web.TransactionResponse{}, err
+	}
+
+	// check wallet status
+	if wallet.Status == constants.STATUS_DISABLED {
+		return []web.TransactionResponse{}, errors.New("wallet disabled")
 	}
 
 	transaction, err := svc.WalletRepository.GetWalletTransactions(ctx, wallet.ID)
@@ -137,19 +158,12 @@ func (svc *WalletService) AddWalletBalance(ctx context.Context, customerXID stri
 		return web.DepositResponse{}, err
 	}
 
+	// check wallet status
 	if wallet.Status == constants.STATUS_DISABLED {
 		return web.DepositResponse{}, errors.New("wallet disabled")
 	}
 
-	isUpdated, err := svc.WalletRepository.UpdateWalletBalance(ctx, wallet.ID, wallet.Balance, wallet.Balance+request.Amount)
-	if err != nil {
-		return web.DepositResponse{}, err
-	}
-	status := constants.STATUS_FAILED
-	if isUpdated {
-		status = constants.STATUS_SUCCESS
-	}
-
+	// insert transaction with status pending
 	transaction := domain.Transaction{
 		ID:              uuid.New().String(),
 		WalletID:        wallet.ID,
@@ -157,7 +171,7 @@ func (svc *WalletService) AddWalletBalance(ctx context.Context, customerXID stri
 		TransactionType: constants.TRANSACTION_TYPE_DEPOSIT,
 		Amount:          request.Amount,
 		ReferenceID:     request.ReferenceID,
-		Status:          status,
+		Status:          constants.STATUS_PENDING,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
@@ -165,6 +179,25 @@ func (svc *WalletService) AddWalletBalance(ctx context.Context, customerXID stri
 	if err != nil {
 		return web.DepositResponse{}, err
 	}
+
+	go func() {
+		// delay 5 seconds for update wallet balance
+		time.Sleep(5 * time.Second)
+		isUpdated, err := svc.WalletRepository.UpdateWalletBalance(context.Background(), wallet.ID, wallet.Balance, wallet.Balance+request.Amount)
+		if err != nil {
+			log.Println("error update wallet balance:", err.Error())
+		}
+
+		status := constants.STATUS_FAILED
+		if isUpdated {
+			status = constants.STATUS_SUCCESS
+		}
+
+		err = svc.WalletRepository.UpdateTransactionStatus(context.Background(), transaction.ID, status)
+		if err != nil {
+			log.Println("error update transaction status:", err.Error())
+		}
+	}()
 
 	return web.DepositResponse{
 		ID:          transaction.ID,
@@ -182,23 +215,17 @@ func (svc *WalletService) DeductWalletBalance(ctx context.Context, customerXID s
 		return web.WithdrawalResponse{}, err
 	}
 
+	// check wallet status
 	if wallet.Status == constants.STATUS_DISABLED {
 		return web.WithdrawalResponse{}, errors.New("wallet disabled")
 	}
 
+	// compare amount with balance
 	if request.Amount > wallet.Balance {
 		return web.WithdrawalResponse{}, errors.New("insufficient balance")
 	}
 
-	isUpdated, err := svc.WalletRepository.UpdateWalletBalance(ctx, wallet.ID, wallet.Balance, wallet.Balance-request.Amount)
-	if err != nil {
-		return web.WithdrawalResponse{}, err
-	}
-	status := constants.STATUS_FAILED
-	if isUpdated {
-		status = constants.STATUS_SUCCESS
-	}
-
+	// insert transaction with status pending
 	transaction := domain.Transaction{
 		ID:              uuid.New().String(),
 		WalletID:        wallet.ID,
@@ -206,7 +233,7 @@ func (svc *WalletService) DeductWalletBalance(ctx context.Context, customerXID s
 		TransactionType: constants.TRANSACTION_TYPE_WITHDRAWAL,
 		Amount:          request.Amount,
 		ReferenceID:     request.ReferenceID,
-		Status:          status,
+		Status:          constants.STATUS_PENDING,
 		CreatedAt:       time.Now(),
 		UpdatedAt:       time.Now(),
 	}
@@ -214,6 +241,23 @@ func (svc *WalletService) DeductWalletBalance(ctx context.Context, customerXID s
 	if err != nil {
 		return web.WithdrawalResponse{}, err
 	}
+
+	go func() {
+		time.Sleep(5 * time.Second)
+		isUpdated, err := svc.WalletRepository.UpdateWalletBalance(context.Background(), wallet.ID, wallet.Balance, wallet.Balance-request.Amount)
+		if err != nil {
+			log.Println("error update wallet balance:", err.Error())
+		}
+
+		status := constants.STATUS_FAILED
+		if isUpdated {
+			status = constants.STATUS_SUCCESS
+		}
+		err = svc.WalletRepository.UpdateTransactionStatus(context.Background(), transaction.ID, status)
+		if err != nil {
+			log.Println("error update transaction status:", err.Error())
+		}
+	}()
 
 	return web.WithdrawalResponse{
 		ID:          transaction.ID,

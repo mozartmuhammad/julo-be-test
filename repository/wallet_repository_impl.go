@@ -3,7 +3,6 @@ package repository
 import (
 	"context"
 	"database/sql"
-	"fmt"
 	"time"
 
 	"github.com/mozartmuhammad/julo-be-test/model/domain"
@@ -20,10 +19,8 @@ func NewWalletRepository(db *sql.DB) WalletRepository {
 }
 
 func (repo *WalletRepositoryImpl) CreateWallet(ctx context.Context, wallet domain.Wallet) error {
-	fmt.Println("haha")
 	tx, err := repo.db.Begin()
 	if err != nil {
-		fmt.Println("hihi")
 		return err
 	}
 
@@ -111,8 +108,8 @@ func (repo *WalletRepositoryImpl) GetWalletTransactions(ctx context.Context, wal
 			&data.CustomerXID,
 			&data.TransactionType,
 			&data.Amount,
-			&data.Status,
 			&data.ReferenceID,
+			&data.Status,
 			&data.CreatedAt,
 			&data.UpdatedAt,
 		)
@@ -154,6 +151,32 @@ func (repo *WalletRepositoryImpl) AddTransaction(ctx context.Context, transactio
 		_ = tx.Rollback()
 
 		return errorCommit
+	}
+
+	return nil
+}
+
+func (repo *WalletRepositoryImpl) UpdateTransactionStatus(ctx context.Context, transactionID string, status string) error {
+	tx, err := repo.db.Begin()
+	if err != nil {
+		return err
+	}
+
+	SQL := `UPDATE transactions
+		SET
+			status = ?,
+			updated_at = CURRENT_TIMESTAMP
+		WHERE 
+			id = ?`
+
+	_, err = tx.ExecContext(ctx, SQL, status, transactionID)
+	if err != nil {
+		return err
+	}
+
+	err = tx.Commit()
+	if err != nil {
+		return err
 	}
 
 	return nil

@@ -2,7 +2,6 @@ package app
 
 import (
 	"database/sql"
-	"fmt"
 	"os"
 	"time"
 )
@@ -10,7 +9,6 @@ import (
 func NewDB() *sql.DB {
 	databaseUrl := os.Getenv("DATABASE_URL")
 	db, err := sql.Open("mysql", databaseUrl)
-	fmt.Println("DATABASE_URL", databaseUrl)
 	if err != nil {
 		panic(err)
 	}

@@ -1,15 +1,11 @@
-.PHONY: clean all init generate generate_mocks
+.PHONY: init test mock-repository
 
-all: build/main
-
-build/main: cmd/main.go generated
-	@echo "Building..."
-	go build -o $@ $<
-
-
-init: generate
+init: 
 	go mod tidy
 	go mod vendor
 
 test:
 	go test -short -coverprofile coverage.out -v ./...
+
+mock-repository:
+	$(shell go env GOPATH)/bin/mockgen -source src/repository/wallet_repository.go -destination src/mock/repository/wallet_repository.go

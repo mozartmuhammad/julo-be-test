@@ -2,8 +2,8 @@ package app
 
 import (
 	"github.com/gorilla/mux"
-	"github.com/mozartmuhammad/julo-be-test/controller"
-	"github.com/mozartmuhammad/julo-be-test/middleware"
+	"github.com/mozartmuhammad/julo-be-test/src/controller"
+	"github.com/mozartmuhammad/julo-be-test/src/middleware"
 )
 
 func NewRouter(walletController controller.WalletController) *mux.Router {

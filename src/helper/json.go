@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"net/http"
 
-	"github.com/mozartmuhammad/julo-be-test/model/web"
+	"github.com/mozartmuhammad/julo-be-test/src/model/web"
 )
 
 func WriteSuccess(w http.ResponseWriter, data interface{}) {

@@ -3,7 +3,7 @@ package service
 import (
 	"context"
 
-	"github.com/mozartmuhammad/julo-be-test/model/web"
+	"github.com/mozartmuhammad/julo-be-test/src/model/web"
 )
 
 type WalletServiceItf interface {

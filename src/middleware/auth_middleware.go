@@ -7,7 +7,7 @@ import (
 	"strings"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/mozartmuhammad/julo-be-test/helper"
+	"github.com/mozartmuhammad/julo-be-test/src/helper"
 )
 
 // Define JWTClaimsContextKey as the key to access JWT claims in the context

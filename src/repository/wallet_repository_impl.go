@@ -5,7 +5,7 @@ import (
 	"database/sql"
 	"time"
 
-	"github.com/mozartmuhammad/julo-be-test/model/domain"
+	"github.com/mozartmuhammad/julo-be-test/src/model/domain"
 )
 
 type WalletRepositoryImpl struct {
@@ -24,11 +24,7 @@ func (repo *WalletRepositoryImpl) CreateWallet(ctx context.Context, wallet domai
 		return err
 	}
 
-	SQL := `INSERT INTO wallets
-		(id, customer_xid)
-		VALUES(?, ?)`
-
-	_, err = tx.ExecContext(ctx, SQL, wallet.ID, wallet.CustomerXID)
+	_, err = tx.ExecContext(ctx, insertWalletQuery, wallet.ID, wallet.CustomerXID)
 	if err != nil {
 		return err
 	}
@@ -49,15 +45,7 @@ func (repo *WalletRepositoryImpl) UpdateWalletStatus(ctx context.Context, custom
 		return err
 	}
 
-	SQL := `UPDATE wallets
-		SET
-			status = ?,
-			enabled_at = ?,
-			updated_at = CURRENT_TIMESTAMP
-		WHERE 
-			customer_xid = ?`
-
-	_, err = tx.ExecContext(ctx, SQL, status, enabledAt, customerXID)
+	_, err = tx.ExecContext(ctx, updateWalletStatusQuery, status, enabledAt, customerXID)
 	if err != nil {
 		return err
 	}
@@ -74,8 +62,7 @@ func (repo *WalletRepositoryImpl) UpdateWalletStatus(ctx context.Context, custom
 
 func (repo *WalletRepositoryImpl) GetWallet(ctx context.Context, customerXID string) (domain.Wallet, error) {
 	var result domain.Wallet
-	SQL := "select id, customer_xid, status, enabled_at, balance, created_at, updated_at FROM wallets WHERE customer_xid = ?"
-	err := repo.db.QueryRowContext(ctx, SQL, customerXID).Scan(
+	err := repo.db.QueryRowContext(ctx, getWalletQuery, customerXID).Scan(
 		&result.ID,
 		&result.CustomerXID,
 		&result.Status,
@@ -92,8 +79,7 @@ func (repo *WalletRepositoryImpl) GetWallet(ctx context.Context, customerXID str
 
 func (repo *WalletRepositoryImpl) GetWalletTransactions(ctx context.Context, walletID string) ([]domain.Transaction, error) {
 	var result []domain.Transaction
-	SQL := "select id, wallet_id, customer_xid, transaction_type, amount, reference_id, status, created_at, updated_at FROM transactions WHERE wallet_id = ? order by created_at"
-	rows, err := repo.db.QueryContext(ctx, SQL, walletID)
+	rows, err := repo.db.QueryContext(ctx, getTransactionsQuery, walletID)
 	if err != nil {
 		return result, err
 	}
@@ -127,11 +113,7 @@ func (repo *WalletRepositoryImpl) AddTransaction(ctx context.Context, transactio
 		return err
 	}
 
-	SQL := `INSERT INTO transactions
-		(id, wallet_id, customer_xid, transaction_type, amount, reference_id, status, created_at, updated_at)
-		VALUES(?, ?, ?, ?, ?, ?, ?, ?, ?)`
-
-	_, err = tx.ExecContext(ctx, SQL,
+	_, err = tx.ExecContext(ctx, insertTransactionQuery,
 		transaction.ID,
 		transaction.WalletID,
 		transaction.CustomerXID,
@@ -162,14 +144,7 @@ func (repo *WalletRepositoryImpl) UpdateTransactionStatus(ctx context.Context, t
 		return err
 	}
 
-	SQL := `UPDATE transactions
-		SET
-			status = ?,
-			updated_at = CURRENT_TIMESTAMP
-		WHERE 
-			id = ?`
-
-	_, err = tx.ExecContext(ctx, SQL, status, transactionID)
+	_, err = tx.ExecContext(ctx, updateTransactionStatusQuery, status, transactionID)
 	if err != nil {
 		return err
 	}

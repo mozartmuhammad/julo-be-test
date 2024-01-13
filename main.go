@@ -2,11 +2,12 @@ package main
 
 import (
 	"net/http"
+	"time"
 
-	"github.com/mozartmuhammad/julo-be-test/app"
-	"github.com/mozartmuhammad/julo-be-test/controller"
-	"github.com/mozartmuhammad/julo-be-test/repository"
-	"github.com/mozartmuhammad/julo-be-test/service"
+	"github.com/mozartmuhammad/julo-be-test/src/app"
+	"github.com/mozartmuhammad/julo-be-test/src/controller"
+	"github.com/mozartmuhammad/julo-be-test/src/repository"
+	"github.com/mozartmuhammad/julo-be-test/src/service"
 
 	"github.com/go-playground/validator/v10"
 	_ "github.com/go-sql-driver/mysql"
@@ -16,7 +17,7 @@ func main() {
 	db := app.NewDB()
 	validate := validator.New()
 	walletRepository := repository.NewWalletRepository(db)
-	walletService := service.NewWalletService(walletRepository, db, validate)
+	walletService := service.NewWalletService(walletRepository, validate, 5*time.Second)
 	walletController := controller.NewWalletController(walletService)
 
 	router := app.NewRouter(walletController)

@@ -2,25 +2,25 @@ package service
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"log"
 	"time"
 
 	"github.com/go-playground/validator/v10"
 	"github.com/google/uuid"
-	"github.com/mozartmuhammad/julo-be-test/model/constants"
-	"github.com/mozartmuhammad/julo-be-test/model/domain"
-	"github.com/mozartmuhammad/julo-be-test/model/web"
-	"github.com/mozartmuhammad/julo-be-test/repository"
+	"github.com/mozartmuhammad/julo-be-test/src/model/constants"
+	"github.com/mozartmuhammad/julo-be-test/src/model/domain"
+	"github.com/mozartmuhammad/julo-be-test/src/model/web"
+	"github.com/mozartmuhammad/julo-be-test/src/repository"
 )
 
 type WalletService struct {
 	WalletRepository repository.WalletRepository
 	Validate         *validator.Validate
+	DelayDuration    time.Duration
 }
 
-func NewWalletService(walletRepository repository.WalletRepository, DB *sql.DB, validate *validator.Validate) WalletServiceItf {
+func NewWalletService(walletRepository repository.WalletRepository, validate *validator.Validate, delay time.Duration) WalletServiceItf {
 	return &WalletService{
 		WalletRepository: walletRepository,
 		Validate:         validate,
@@ -182,7 +182,7 @@ func (svc *WalletService) AddWalletBalance(ctx context.Context, customerXID stri
 
 	go func() {
 		// delay 5 seconds for update wallet balance
-		time.Sleep(5 * time.Second)
+		time.Sleep(svc.DelayDuration)
 		isUpdated, err := svc.WalletRepository.UpdateWalletBalance(context.Background(), wallet.ID, wallet.Balance, wallet.Balance+request.Amount)
 		if err != nil {
 			log.Println("error update wallet balance:", err.Error())
@@ -210,6 +210,11 @@ func (svc *WalletService) AddWalletBalance(ctx context.Context, customerXID stri
 }
 
 func (svc *WalletService) DeductWalletBalance(ctx context.Context, customerXID string, request web.TransactionRequest) (web.WithdrawalResponse, error) {
+	err := svc.Validate.StructCtx(ctx, request)
+	if err != nil {
+		return web.WithdrawalResponse{}, err
+	}
+
 	wallet, err := svc.WalletRepository.GetWallet(ctx, customerXID)
 	if err != nil {
 		return web.WithdrawalResponse{}, err
@@ -243,7 +248,7 @@ func (svc *WalletService) DeductWalletBalance(ctx context.Context, customerXID s
 	}
 
 	go func() {
-		time.Sleep(5 * time.Second)
+		time.Sleep(svc.DelayDuration)
 		isUpdated, err := svc.WalletRepository.UpdateWalletBalance(context.Background(), wallet.ID, wallet.Balance, wallet.Balance-request.Amount)
 		if err != nil {
 			log.Println("error update wallet balance:", err.Error())

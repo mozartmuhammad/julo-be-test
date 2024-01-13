@@ -7,9 +7,9 @@ import (
 	"time"
 
 	"github.com/golang-jwt/jwt"
-	"github.com/mozartmuhammad/julo-be-test/helper"
-	"github.com/mozartmuhammad/julo-be-test/model/web"
-	"github.com/mozartmuhammad/julo-be-test/service"
+	"github.com/mozartmuhammad/julo-be-test/src/helper"
+	"github.com/mozartmuhammad/julo-be-test/src/model/web"
+	"github.com/mozartmuhammad/julo-be-test/src/service"
 )
 
 type WalletControllerImpl struct {

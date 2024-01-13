@@ -4,7 +4,7 @@ import (
 	"context"
 	"time"
 
-	"github.com/mozartmuhammad/julo-be-test/model/domain"
+	"github.com/mozartmuhammad/julo-be-test/src/model/domain"
 )
 
 type WalletRepository interface {

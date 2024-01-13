@@ -10,10 +10,6 @@ import (
 	"github.com/mozartmuhammad/julo-be-test/src/helper"
 )
 
-// Define JWTClaimsContextKey as the key to access JWT claims in the context
-const JWTClaimsContextKey = "jwtClaims"
-const CustomerXIDContextKey = "customer_xid"
-
 // JWTClaims represents the claims in the JWT token
 type JWTClaims struct {
 	CustomerXID string `json:"customer_xid"`

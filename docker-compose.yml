@@ -1,0 +1,33 @@
+services:
+  app:
+    build: .
+    ports:
+      - "8080:1323"
+    environment:
+      DATABASE_URL: root:passwordxx@tcp(db:3306)/miniwallet?parseTime=true
+      SECRET: miniwallet
+    depends_on:
+      db:
+        condition: service_healthy
+  db:
+    image: mysql:latest
+    restart: always
+    command: --default-authentication-plugin=mysql_native_password
+    environment:
+      MYSQL_ROOT_PASSWORD: passwordxx
+    ports:
+      - 3307:3306
+    volumes:
+      - db:/var/lib/mysql
+      # Load database schema from ./database.sql
+      # If you want to reload new database schema, you need to execute
+      # `docker-compose down --volumes` first to remove the volume.
+      - ./database.sql:/docker-entrypoint-initdb.d/database.sql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "--silent"]
+      interval: 10s
+      timeout: 5s
+      retries: 3
+volumes:
+  db:
+    driver: local
